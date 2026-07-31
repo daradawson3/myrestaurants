@@ -292,6 +292,87 @@
   .map-legend .dot.std{ background: var(--brick); }
   .map-legend .dot.closed{ background: var(--closed); }
 
+  /* ---------- RECOMMEND QUIZ ---------- */
+  .quiz-wrap{ padding: 3rem 6vw 5rem; background: var(--ink); }
+  .quiz-card{
+    background: var(--marble); color: var(--ink);
+    border-radius: 6px;
+    padding: 2.2rem 2.4rem;
+    max-width: 760px;
+    margin: 0 auto;
+    border: 1px solid #d9cdae;
+  }
+  .quiz-title{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    margin: 0.2rem 0 1.8rem;
+  }
+  .quiz-wrap .eyebrow{ color: var(--brick-deep); }
+  .quiz-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 1.6rem; }
+  .quiz-q label{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.68rem; text-transform:uppercase; letter-spacing:0.06em;
+    color: var(--mortar); margin-bottom:0.5rem;
+  }
+  .quiz-q select{
+    width:100%;
+    font-family:'Inter', sans-serif;
+    font-size:0.86rem;
+    padding: 0.55rem 0.6rem;
+    border: 1.5px solid var(--ink);
+    border-radius: 3px;
+    background:#fff; color:var(--ink);
+  }
+  .pill-group{ display:flex; flex-wrap:wrap; gap:0.5rem; }
+  .pill{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.72rem;
+    padding: 0.45rem 0.8rem;
+    border-radius: 20px;
+    border: 1.5px solid var(--ink);
+    background:#fff; color:var(--ink);
+    cursor:pointer;
+  }
+  .pill.selected{ background: var(--brick); border-color: var(--brick); color:#fff; }
+  .quiz-submit{
+    margin-top: 2rem;
+    font-family:'Fraunces', serif;
+    font-weight:600; font-style:italic;
+    font-size:1.05rem;
+    background: var(--brick); color:#fff;
+    border:none; border-radius:4px;
+    padding: 0.8rem 1.8rem;
+    cursor:pointer;
+  }
+  .quiz-submit:hover{ background: var(--brick-deep); }
+  .quiz-results{ max-width: 760px; margin: 2rem auto 0; display:grid; gap:1rem; }
+  .quiz-result-card{
+    background: var(--marble); color: var(--ink);
+    border-radius: 6px; padding: 1.3rem 1.6rem;
+    border: 1px solid #d9cdae;
+    position:relative;
+  }
+  .quiz-result-card.top{ border: 2px solid var(--gold); }
+  .quiz-rank{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.65rem; text-transform:uppercase; letter-spacing:0.08em;
+    color: var(--gold);
+    margin:0 0 0.3rem;
+  }
+  .quiz-why{
+    font-family:'Fraunces', serif; font-style:italic;
+    color: var(--mortar);
+    font-size:0.95rem;
+    margin-top:0.5rem;
+  }
+  .quiz-empty{
+    font-family:'Fraunces', serif; font-style:italic;
+    text-align:center; color: var(--mortar); font-size:1.1rem;
+    padding: 2rem;
+  }
+
   .closed-badge{
     display:inline-block; margin-top:0.6rem;
     font-family:'IBM Plex Mono', monospace;
@@ -371,6 +452,7 @@
   <div class="view-toggle">
     <button type="button" class="view-btn active" data-view="list">List</button>
     <button type="button" class="view-btn" data-view="map">Map</button>
+    <button type="button" class="view-btn" data-view="recommend">Pick For Me</button>
   </div>
   <div class="sync-status" id="syncStatus">
     <span id="syncText">Loading from spreadsheet…</span>
@@ -391,6 +473,61 @@
     <span><i class="dot closed"></i> Closed</span>
   </div>
 </div>
+
+<div class="quiz-wrap" id="recommendWrap" hidden>
+  <div class="quiz-card">
+    <p class="eyebrow">Tell me what you're after</p>
+    <h2 class="quiz-title">What are we picking tonight?</h2>
+
+    <div class="quiz-grid">
+      <div class="quiz-q">
+        <label>What's the occasion?</label>
+        <div class="pill-group" data-key="vibe">
+          <button type="button" class="pill" data-value="">No preference</button>
+          <button type="button" class="pill" data-value="Casual">Low-key</button>
+          <button type="button" class="pill" data-value="Nice">Nice night out</button>
+          <button type="button" class="pill" data-value="Fancy">Special occasion</button>
+        </div>
+      </div>
+
+      <div class="quiz-q">
+        <label>Budget</label>
+        <div class="pill-group" data-key="price">
+          <button type="button" class="pill" data-value="">No preference</button>
+          <button type="button" class="pill" data-value="$">$</button>
+          <button type="button" class="pill" data-value="$$">$$</button>
+          <button type="button" class="pill" data-value="$$$">$$$</button>
+          <button type="button" class="pill" data-value="$$$$">$$$$</button>
+        </div>
+      </div>
+
+      <div class="quiz-q">
+        <label>Neighborhood</label>
+        <select id="quizHood"><option value="">No preference</option></select>
+      </div>
+
+      <div class="quiz-q">
+        <label>Craving a specific cuisine?</label>
+        <select id="quizCuisine"><option value="">Surprise me</option></select>
+      </div>
+
+      <div class="quiz-q">
+        <label>Meal</label>
+        <div class="pill-group" data-key="meal">
+          <button type="button" class="pill" data-value="">No preference</button>
+          <button type="button" class="pill" data-value="Breakfast">Breakfast</button>
+          <button type="button" class="pill" data-value="Dinner">Dinner</button>
+          <button type="button" class="pill" data-value="Bar">Drinks / bar</button>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" id="quizSubmit" class="quiz-submit">Find my spot</button>
+  </div>
+
+  <div id="quizResults" class="quiz-results"></div>
+</div>
+
 
 <footer>Built from a personal spreadsheet, one BYOB at a time.</footer>
 
@@ -613,6 +750,7 @@ const hideClosedEl = document.getElementById('hideClosed');
 const countLine = document.getElementById('countLine');
 const listWrap = document.getElementById('listWrap');
 const mapWrap = document.getElementById('mapWrap');
+const recommendWrap = document.getElementById('recommendWrap');
 const viewBtns = document.querySelectorAll('.view-btn');
 
 let currentView = 'list';
@@ -694,14 +832,22 @@ function rebuildFilterOptions(){
   const prevCuisine = cuisineEl.value;
   hoodEl.innerHTML = '<option value="">All</option>';
   cuisineEl.innerHTML = '<option value="">All</option>';
-  uniqueSorted(DATA.map(d=>d.hood)).forEach(h=>{
-    const o=document.createElement('option'); o.value=h; o.textContent=h; hoodEl.appendChild(o);
+  const quizHoodEl = document.getElementById('quizHood');
+  const quizCuisineEl = document.getElementById('quizCuisine');
+  quizHoodEl.innerHTML = '<option value="">No preference</option>';
+  quizCuisineEl.innerHTML = '<option value="">Surprise me</option>';
+  const hoods = uniqueSorted(DATA.filter(d=>!d.closed).map(d=>d.hood));
+  const cuisines = uniqueSorted(DATA.filter(d=>!d.closed).map(d=>d.cuisine));
+  hoods.forEach(h=>{
+    hoodEl.appendChild(new Option(h,h));
+    quizHoodEl.appendChild(new Option(h,h));
   });
-  uniqueSorted(DATA.map(d=>d.cuisine)).forEach(c=>{
-    const o=document.createElement('option'); o.value=c; o.textContent=c; cuisineEl.appendChild(o);
+  cuisines.forEach(c=>{
+    cuisineEl.appendChild(new Option(c,c));
+    quizCuisineEl.appendChild(new Option(c,c));
   });
-  if(uniqueSorted(DATA.map(d=>d.hood)).includes(prevHood)) hoodEl.value = prevHood;
-  if(uniqueSorted(DATA.map(d=>d.cuisine)).includes(prevCuisine)) cuisineEl.value = prevCuisine;
+  if(hoods.includes(prevHood)) hoodEl.value = prevHood;
+  if(cuisines.includes(prevCuisine)) cuisineEl.value = prevCuisine;
 }
 
 function updateStats(){
@@ -770,7 +916,8 @@ viewBtns.forEach(btn=>{
     viewBtns.forEach(b=>b.classList.toggle('active', b===btn));
     listWrap.hidden = currentView !== 'list';
     mapWrap.hidden = currentView !== 'map';
-    render();
+    recommendWrap.hidden = currentView !== 'recommend';
+    if(currentView !== 'recommend') render();
   });
 });
 
@@ -780,6 +927,91 @@ viewBtns.forEach(btn=>{
 });
 
 document.getElementById('syncBtn').addEventListener('click', ()=> loadFromSheet(true));
+
+// ---- Recommendation quiz ----
+const quizAnswers = { vibe:'', price:'', meal:'' };
+
+document.querySelectorAll('.pill-group').forEach(group=>{
+  const key = group.dataset.key;
+  group.querySelectorAll('.pill').forEach(pill=>{
+    pill.addEventListener('click', ()=>{
+      group.querySelectorAll('.pill').forEach(p=>p.classList.remove('selected'));
+      pill.classList.add('selected');
+      quizAnswers[key] = pill.dataset.value;
+    });
+  });
+  // default the "No preference" pill to selected
+  const first = group.querySelector('.pill');
+  if(first) first.classList.add('selected');
+});
+
+function scoreCandidate(d, answers){
+  let score = d.total * 10;
+  if(answers.price){
+    score += (answers.price === d.price) ? 60 : -25;
+  }
+  if(answers.vibe){
+    score += (answers.vibe === d.vibe) ? 45 : -10;
+  }
+  if(answers.meal){
+    score += d.meal.toLowerCase().includes(answers.meal.toLowerCase()) ? 45 : -15;
+  }
+  if(answers.hood){
+    score += (answers.hood === d.hood) ? 35 : 0;
+  }
+  if(answers.cuisine){
+    score += (answers.cuisine === d.cuisine) ? 60 : -40;
+  }
+  return score;
+}
+
+function whyPicked(d, answers){
+  const reasons = [];
+  if(answers.cuisine && answers.cuisine === d.cuisine) reasons.push(`it's ${d.cuisine.toLowerCase()}`);
+  if(answers.vibe && answers.vibe === d.vibe) reasons.push(`fits a ${d.vibe.toLowerCase()} night`);
+  if(answers.price && answers.price === d.price) reasons.push(`right in your ${d.price} budget`);
+  if(answers.hood && answers.hood === d.hood) reasons.push(`it's in ${d.hood}`);
+  if(answers.meal && d.meal.toLowerCase().includes(answers.meal.toLowerCase())) reasons.push(`works for ${answers.meal.toLowerCase()}`);
+  if(d.total >= 9) reasons.push('it\'s one of the highest-scored spots on the list');
+  if(!reasons.length) reasons.push(`it scored a strong ${d.total} overall`);
+  return reasons.slice(0,3).join(', ');
+}
+
+document.getElementById('quizSubmit').addEventListener('click', ()=>{
+  const answers = {
+    vibe: quizAnswers.vibe,
+    price: quizAnswers.price,
+    meal: quizAnswers.meal,
+    hood: document.getElementById('quizHood').value,
+    cuisine: document.getElementById('quizCuisine').value
+  };
+
+  const candidates = DATA.filter(d => !d.closed);
+  const ranked = candidates
+    .map(d => ({ d, score: scoreCandidate(d, answers) }))
+    .sort((a,b) => b.score - a.score)
+    .slice(0, 3);
+
+  const resultsEl = document.getElementById('quizResults');
+  if(!ranked.length){
+    resultsEl.innerHTML = '<div class="quiz-empty">Nothing matched — try loosening a preference.</div>';
+    return;
+  }
+
+  resultsEl.innerHTML = ranked.map(({d}, i) => `
+    <div class="quiz-result-card ${i===0 ? 'top' : ''}">
+      <p class="quiz-rank">${i===0 ? 'Top pick' : `Also consider · #${i+1}`}</p>
+      <h3>${d.name}</h3>
+      <p class="loc">${d.hood} · ${d.cuisine} · ${d.price}</p>
+      <div class="meta-row">
+        <span class="subscore">food ${d.food} · ambiance ${d.ambiance}</span>
+        <span class="price">score ${d.total}</span>
+      </div>
+      <p class="quiz-why">Because ${whyPicked(d, answers)}.</p>
+      ${d.address ? `<div class="address-row"><span class="addr">${d.address}</span><a class="map-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d.name + ' ' + d.address)}" target="_blank" rel="noopener">Directions →</a></div>` : ''}
+    </div>
+  `).join('');
+});
 
 sortEl.value = 'score-desc';
 render();
