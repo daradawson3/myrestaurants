@@ -1,2 +1,791 @@
 # myrestaurants
 Philly restaurants!
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Philly List — A Field Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root{
+    --brick: #A6402F;
+    --brick-deep: #7C2E22;
+    --marble: #EDE6D6;
+    --marble-dim: #E2D9C4;
+    --ink: #232220;
+    --mortar: #8B8378;
+    --gold: #B9932E;
+    --closed: #b6ada0;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--ink);
+    color: var(--marble);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- HERO ---------- */
+  .hero{
+    position:relative;
+    padding: 5rem 6vw 4rem;
+    background:
+      linear-gradient(180deg, rgba(35,34,32,0.15), rgba(35,34,32,0.85) 88%),
+      repeating-linear-gradient(90deg, #6b2c22 0 38px, #7c3226 38px 40px);
+    border-bottom: 6px solid var(--gold);
+    overflow:hidden;
+  }
+  .hero::after{
+    content:"";
+    position:absolute; inset:0;
+    background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0 2px, transparent 2px 26px);
+    pointer-events:none;
+    mix-blend-mode: multiply;
+    opacity:0.5;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color: var(--gold);
+    font-size:0.72rem;
+    margin:0 0 1rem;
+  }
+  h1.title{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size: clamp(2.6rem, 7vw, 5.2rem);
+    line-height:0.95;
+    margin:0;
+    color: var(--marble);
+    max-width: 14ch;
+  }
+  h1.title em{
+    font-style: italic;
+    font-weight: 500;
+    color: var(--gold);
+  }
+  .hero p.sub{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-weight:400;
+    font-size: clamp(1rem, 1.6vw, 1.25rem);
+    color: var(--marble-dim);
+    max-width: 46ch;
+    margin: 1.4rem 0 0;
+    line-height:1.5;
+  }
+  .stat-strip{
+    display:flex; gap: 2.2rem; flex-wrap:wrap;
+    margin-top: 2.6rem;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .stat-strip div{ font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase; color: var(--mortar); }
+  .stat-strip strong{ display:block; font-size:1.6rem; color: var(--marble); font-family:'Fraunces',serif; font-weight:600; }
+
+  /* ---------- CONTROLS ---------- */
+  .controls{
+    background: var(--marble);
+    color: var(--ink);
+    padding: 1.6rem 6vw;
+    display:flex; flex-wrap:wrap; gap:0.9rem;
+    align-items:center;
+    position:sticky; top:0; z-index:10;
+    border-bottom: 1px solid #d6cbb0;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+  }
+  .controls label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.65rem;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color: var(--mortar);
+    display:block;
+    margin-bottom:0.28rem;
+  }
+  .field{ display:flex; flex-direction:column; min-width: 128px; }
+  select, input[type=text]{
+    font-family:'Inter', sans-serif;
+    font-size:0.86rem;
+    padding: 0.5rem 0.6rem;
+    border: 1.5px solid var(--ink);
+    border-radius: 3px;
+    background: #fff;
+    color: var(--ink);
+  }
+  input[type=text]{ min-width: 190px; }
+  .field.grow{ flex:1; }
+  .toggle-closed{
+    display:flex; align-items:center; gap:0.4rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.72rem;
+    color: var(--mortar);
+    cursor:pointer;
+    margin-left:auto;
+    white-space:nowrap;
+  }
+  .toggle-closed input{ accent-color: var(--brick); width:14px; height:14px; }
+  .count-line{
+    width:100%;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.7rem;
+    color: var(--mortar);
+    padding-top: 0.3rem;
+    border-top: 1px dashed #cfc2a1;
+    margin-top: 0.4rem;
+  }
+
+  /* ---------- GRID ---------- */
+  .grid-wrap{ padding: 3rem 6vw 5rem; background: var(--ink); }
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.4rem;
+  }
+  .card{
+    background: var(--marble);
+    color: var(--ink);
+    border-radius: 4px;
+    padding: 1.3rem 1.3rem 1.1rem;
+    position:relative;
+    border: 1px solid #d9cdae;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .card:hover{ transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0,0,0,0.35); }
+  .card.is-closed{ opacity:0.52; filter: grayscale(0.5); }
+  .card-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:0.6rem; }
+  .card h3{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:1.18rem;
+    margin:0 0 0.15rem;
+    line-height:1.2;
+  }
+  .card .loc{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.68rem;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color: var(--brick-deep);
+    margin:0;
+  }
+  .stamp{
+    flex-shrink:0;
+    width:52px; height:52px;
+    border-radius:50%;
+    border: 2px solid var(--brick);
+    color: var(--brick);
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column;
+    font-family:'IBM Plex Mono', monospace;
+    transform: rotate(-8deg);
+    position:relative;
+  }
+  .stamp.favorite{ border-color: var(--gold); color: var(--gold); }
+  .stamp .num{ font-size:1.05rem; font-weight:600; line-height:1; }
+  .stamp .lbl{ font-size:0.42rem; letter-spacing:0.06em; text-transform:uppercase; }
+  .fav-flag{
+    position:absolute; top:-9px; left:-9px;
+    background: var(--gold); color: var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.55rem; font-weight:600; letter-spacing:0.05em;
+    padding: 2px 6px; border-radius:2px;
+    transform: rotate(-4deg);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+  .tags{ display:flex; flex-wrap:wrap; gap:0.35rem; margin: 0.85rem 0 0.9rem; }
+  .tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.65rem;
+    padding: 0.22rem 0.5rem;
+    border-radius: 20px;
+    background: #ffffffaa;
+    border: 1px solid #d9cdae;
+    color: var(--ink);
+  }
+  .meta-row{
+    display:flex; justify-content:space-between; align-items:center;
+    border-top: 1px dashed #cfc2a1;
+    padding-top: 0.7rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.72rem;
+  }
+  .price{ color: var(--brick-deep); font-weight:600; letter-spacing:0.05em; }
+  .subscore{ color: var(--mortar); }
+  .address-row{
+    display:flex; justify-content:space-between; align-items:baseline; gap:0.5rem;
+    margin-top:0.5rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.65rem;
+    color: var(--mortar);
+  }
+  .address-row .addr{ line-height:1.4; }
+  .address-row .map-link{
+    color: var(--brick-deep);
+    text-decoration:none;
+    white-space:nowrap;
+    font-weight:600;
+    border-bottom:1px solid var(--brick-deep);
+  }
+  .address-row .map-link:hover{ color: var(--brick); border-color: var(--brick); }
+  .view-toggle{
+    display:flex; border: 1.5px solid var(--ink); border-radius:3px; overflow:hidden;
+  }
+  .view-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em;
+    padding:0.5rem 0.9rem;
+    background:#fff; color:var(--ink);
+    border:none; cursor:pointer;
+  }
+  .view-btn + .view-btn{ border-left:1.5px solid var(--ink); }
+  .view-btn.active{ background: var(--brick); color:#fff; }
+  .sync-status{
+    display:flex; align-items:center; gap:0.6rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.65rem;
+    color: var(--mortar);
+  }
+  .sync-status.ok #syncText{ color:#4b7a4f; }
+  .sync-status.error #syncText{ color: var(--brick-deep); }
+  #syncBtn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.65rem;
+    background:#fff; border:1.5px solid var(--ink); border-radius:3px;
+    padding:0.3rem 0.55rem; cursor:pointer; color:var(--ink);
+    white-space:nowrap;
+  }
+  #syncBtn:hover{ background: var(--ink); color:#fff; }
+  #syncBtn[disabled]{ opacity:0.5; cursor:default; }
+
+  /* ---------- MAP ---------- */
+  .map-wrap{ padding: 2rem 6vw 5rem; background: var(--ink); }
+  #map{
+    height: 640px;
+    width:100%;
+    border-radius:6px;
+    border: 1px solid #3a3833;
+  }
+  .leaflet-popup-content-wrapper{
+    background: var(--marble);
+    color: var(--ink);
+    border-radius:4px;
+    font-family:'Inter', sans-serif;
+  }
+  .leaflet-popup-tip{ background: var(--marble); }
+  .popup-name{ font-family:'Fraunces',serif; font-weight:600; font-size:1.05rem; margin:0 0 0.2rem; }
+  .popup-loc{ font-family:'IBM Plex Mono', monospace; font-size:0.65rem; text-transform:uppercase; color:var(--brick-deep); margin:0 0 0.5rem; }
+  .popup-meta{ font-family:'IBM Plex Mono', monospace; font-size:0.72rem; color:var(--mortar); margin:0 0 0.5rem; }
+  .popup-link{ font-family:'IBM Plex Mono', monospace; font-size:0.7rem; color:var(--brick-deep); font-weight:600; text-decoration:none; border-bottom:1px solid var(--brick-deep); }
+  .map-legend{
+    display:flex; gap:1.6rem; flex-wrap:wrap;
+    margin-top:1rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.7rem; color: var(--mortar);
+  }
+  .map-legend .dot{ display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:0.4rem; vertical-align:middle; }
+  .map-legend .dot.fav{ background: var(--gold); }
+  .map-legend .dot.std{ background: var(--brick); }
+  .map-legend .dot.closed{ background: var(--closed); }
+
+  .closed-badge{
+    display:inline-block; margin-top:0.6rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.62rem; letter-spacing:0.08em; text-transform:uppercase;
+    color: var(--brick-deep);
+  }
+  .empty-state{
+    grid-column: 1/-1;
+    text-align:center;
+    padding: 4rem 1rem;
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    color: var(--mortar);
+    font-size:1.2rem;
+  }
+
+  footer{
+    text-align:center;
+    padding: 2rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.65rem;
+    color: var(--mortar);
+    background: var(--ink);
+    border-top: 1px solid #3a3833;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .card{ transition:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <p class="eyebrow">Est. one spreadsheet, many dinners — Philadelphia, PA</p>
+  <h1 class="title">The Philly<br><em>List</em></h1>
+  <p class="sub">Ninety-nine places, tasted and rated by hand. Sit-downs and stools, BYOBs and steakhouses — every score is a real meal, not a star average.</p>
+  <div class="stat-strip">
+    <div><strong id="statTotal">–</strong>spots logged</div>
+    <div><strong id="statFav">–</strong>house favorites (9+)</div>
+    <div><strong id="statHoods">–</strong>neighborhoods</div>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="field grow">
+    <label for="q">Search</label>
+    <input type="text" id="q" placeholder="Search a name or cuisine…">
+  </div>
+  <div class="field">
+    <label for="hood">Neighborhood</label>
+    <select id="hood"><option value="">All</option></select>
+  </div>
+  <div class="field">
+    <label for="cuisine">Cuisine</label>
+    <select id="cuisine"><option value="">All</option></select>
+  </div>
+  <div class="field">
+    <label for="price">Price</label>
+    <select id="price">
+      <option value="">All</option>
+      <option value="$">$</option>
+      <option value="$$">$$</option>
+      <option value="$$$">$$$</option>
+      <option value="$$$$">$$$$</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="sort">Sort by</label>
+    <select id="sort">
+      <option value="score-desc">Score, high to low</option>
+      <option value="score-asc">Score, low to high</option>
+      <option value="az">Name, A–Z</option>
+    </select>
+  </div>
+  <label class="toggle-closed"><input type="checkbox" id="hideClosed" checked> Hide closed spots</label>
+  <div class="view-toggle">
+    <button type="button" class="view-btn active" data-view="list">List</button>
+    <button type="button" class="view-btn" data-view="map">Map</button>
+  </div>
+  <div class="sync-status" id="syncStatus">
+    <span id="syncText">Loading from spreadsheet…</span>
+    <button type="button" id="syncBtn" title="Re-fetch from spreadsheet">↻ Sync now</button>
+  </div>
+  <div class="count-line" id="countLine"></div>
+</div>
+
+<div class="grid-wrap" id="listWrap">
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="map-wrap" id="mapWrap" hidden>
+  <div id="map"></div>
+  <div class="map-legend">
+    <span><i class="dot fav"></i> Top scorer (9+)</span>
+    <span><i class="dot std"></i> Logged</span>
+    <span><i class="dot closed"></i> Closed</span>
+  </div>
+</div>
+
+<footer>Built from a personal spreadsheet, one BYOB at a time.</footer>
+
+<script>
+// name, hood, cuisine, mealType, service, vibe, food, ambiance, total, price, address, lat, lng, closed
+// This is the fallback snapshot — used instantly on load and if the live spreadsheet can't be reached.
+const FALLBACK_RAW = [
+["Royal Sushi and Izakaya","Queen Village","Sushi","Dinner/Bar","Sit down","Nice",4.75,4.5,9.25,"$$$","780 S 2nd St, Philadelphia, PA 19147",39.9381073,-75.1465622],
+["Alice","Italian Market","American","Dinner","Sit down","Nice",4.5,4.5,9,"$$$","901 Christian St, Philadelphia, PA 19147",39.9391523,-75.1579221],
+["Charlie Was A Sinner","Center City East","American","Bar","Sit down","Nice",4.5,4.5,9,"$$$","131 S 13th St, Philadelphia, PA 19107",39.9495103,-75.1617716],
+["Fork","Old City","American","Dinner","Sit down","Fancy",4.5,4.5,9,"$$$$","306 Market St, Philadelphia, PA 19106",39.949994,-75.146124],
+["Kalaya","Fishtown","Thai","Dinner","Sit down","Nice",4.5,4.5,9,"$$$$","4 W Palmer St, Philadelphia, PA 19125",39.975649,-75.133089],
+["Sally","Fitler Square","American","Dinner","Sit down","Nice",4.5,4.5,9,"$$$","2229 Spruce St, Philadelphia, PA 19103",39.9488484,-75.1788985],
+["Steak 48","Grad Hospital","Steak","Dinner","Sit down","Fancy",4.5,4.5,9,"$$$$","260 S Broad St, Philadelphia, PA 19102",39.9472682,-75.1649563],
+["Suraya","Fishtown","Lebanese","Dinner/Breakfast","Sit down","Nice",4.5,4.5,9,"$$$$","1528 Frankford Ave, Philadelphia, PA 19125",39.9737135,-75.1339284],
+["Tabachoy","Bella Vista","Filipino","Dinner","Sit down","Nice",4.75,4,8.75,"$$$","932 S 10th St, Philadelphia, PA 19147",39.9383395,-75.1597938],
+["Amá","Fishtown","Mexican","Dinner","Sit down","Nice",4,4.5,8.5,"$$$","101 W Oxford St, Philadelphia, PA 19122",39.974556,-75.134737],
+["Fiorella Pasta","Italian Market","Italian","Dinner","Sit down","Nice",4.5,4,8.5,"$$$","817 Christian St, Philadelphia, PA 19147",39.9388781,-75.1569503],
+["Middle Child Clubhouse","Fishtown","American","Dinner","Sit down","Nice",4.5,4,8.5,"$$$","1232 N Front St, Philadelphia, PA 19122",39.9701638,-75.136144],
+["Osteria","North Broad","Italian","Dinner","Sit down","Nice",4.5,4,8.5,"$$$","640 N Broad St, Philadelphia, PA 19130",39.9650099,-75.161102],
+["Zahav","Society Hill","Middle Eastern","Dinner","Sit down","Nice",4,4.5,8.5,"$$$","237 St James Pl, Philadelphia, PA 19106",39.9462333,-75.1450162],
+["Little Fish BYOB","Queen Village","American","Dinner","Sit down","Nice",4.75,3.5,8.25,"$$$","746 S 6th St, Philadelphia, PA 19147",39.9399843,-75.1529483],
+["Tria Cafe Wash West","Washington Square West","American","Dinner","Sit down","Nice",4,4,8,"$$","Closed — last known: Washington Square West, Philadelphia, PA",null,null,true],
+["Bok Bar","East Passyunk","American","Bar","Bar","Casual",3,5,8,"$","800 Mifflin St, Philadelphia, PA 19148",39.9254387,-75.1596178],
+["Cry Baby Pasta","Queen Village","Italian","Dinner","Sit down","Nice",4,4,8,"$$$","627 S 3rd St, Philadelphia, PA 19147",39.9406127,-75.147572],
+["Giuseppe & Sons","Center City West","Italian","Dinner","Sit down","Nice",4,4,8,"$$$","1523 Sansom St, Philadelphia, PA 19102",39.9504997,-75.1666931],
+["Grace and Proper","Bella Vista","Portuguese","Bar","Bar","Casual",4,4,8,"$$","941 S 8th St, Philadelphia, PA 19147",39.9372492,-75.1564575],
+["Morimoto","Old City","Sushi","Dinner","Sit down","Nice",4,4,8,"$$$$","723 Chestnut St, Philadelphia, PA 19106",39.9496528,-75.153275],
+["Mulherin and Sons","Fishtown","Italian","Dinner","Sit down","Nice",4,4,8,"$$$","1355 N Front St, Philadelphia, PA 19122",39.9717099,-75.1350556],
+["Oyster House","Center City West","Seafood","Dinner","Sit down","Nice",4,4,8,"$$$","1516 Sansom St, Philadelphia, PA 19102",39.9502216,-75.166553],
+["Plough and the Stars","Old City","Irish","Dinner/Bar","Sit down/take out","Casual",4,4,8,"$$","123 Chestnut St (entrance N 2nd St), Philadelphia, PA 19106",39.9486235,-75.1439024],
+["Royal Boucherie","Old City","French","Dinner/Bar","Sit down","Nice",4,4,8,"$$$","52 S 2nd St, Philadelphia, PA 19106",39.9487112,-75.1441173],
+["Sassafras Bar","Old City","American","Bar","Sit down","Nice",4,4,8,"$$$","48 S 2nd St, Philadelphia, PA 19106",39.948787,-75.1440824],
+["Superfolie","Center City West","American","Bar","Bar","Nice",4,4,8,"$$$","1602 Spruce St, Philadelphia, PA 19103",39.9472073,-75.168291],
+["Talula's Garden","Washington Square","American","Dinner","Sit down","Nice",4,4,8,"$$$","210 W Washington Square, Philadelphia, PA 19106",39.9472602,-75.1535347],
+["Tequilas","Center City West","Mexican","Dinner","Sit down","Nice",4,4,8,"$$$","1602 Locust St, Philadelphia, PA 19103",39.948487,-75.1680510],
+["The Love","Rittenhouse","American","Dinner","Sit down","Nice",4,4,8,"$$$","130 S 18th St, Philadelphia, PA 19103",39.950607,-75.1709389],
+["Pod","University City","Asian","Dinner","Sit down","Nice",3.5,4,7.5,"$$$","3636 Sansom St, Philadelphia, PA 19104",39.9539708,-75.196037,true],
+["Bridget Foy's","Head House Square","American","Dinner/Bar","Sit down","Casual",3.5,4,7.5,"$$","200 South St, Philadelphia, PA 19147",39.941118,-75.1458603],
+["Bud & Marliyns","Washington Square West","American","Dinner","Sit down","Nice",3.5,4,7.5,"$$$","1234 Locust St, Philadelphia, PA 19107",39.947808,-75.1621843],
+["Buddakan","Old City","Asian","Dinner","Sit down","Nice",3.5,4,7.5,"$$$","325 Chestnut St, Philadelphia, PA 19106",39.9490386,-75.1471998],
+["Fountain Porter","East Passyunk","American","Bar","Bar","Casual",4,3.5,7.5,"$","1601 S 10th St, Philadelphia, PA 19148",39.9295081,-75.1614274],
+["Khyber Pass","Old City","Irish","Dinner/Bar","Sit down","Casual",4,3.5,7.5,"$$","56 S 2nd St, Philadelphia, PA 19106",39.9486537,-75.1441398],
+["La Jefa","Center City West","Mexican","Dinner/Bar","Sit down","Nice",3.5,4,7.5,"$$$","1605 Latimer St, Philadelphia, PA 19103",39.9483219,-75.1680561],
+["Lazer Wolf","Fishtown","Middle Eastern","Dinner","Sit down","Nice",4,3.5,7.5,"$$$","1301 N Howard St, Philadelphia, PA 19122",39.9706205,-75.1365325],
+["Mish Mish","East Passyunk","American","Dinner","Sit down","Nice",3.5,4,7.5,"$$$","1046 Tasker St, Philadelphia, PA 19148",39.9296476,-75.1630087],
+["Parc","Rittenhouse","French","Dinner/Breakfast","Sit down","Nice",3.5,4,7.5,"$$$","227 S 18th St, Philadelphia, PA 19103",39.9491222,-75.170749],
+["Royal Tavern","Queen Village","American","Dinner/Bar","Sit down","Casual",3.5,4,7.5,"$$","937 Passyunk Ave, Philadelphia, PA 19147",39.9370051,-75.1544921],
+["Taco Heart","Queen Village","Mexican","Breakfast","Take out","Casual",4.5,3,7.5,"$$","1001 Passyunk Ave, Philadelphia, PA 19147",39.9363655,-75.1553475],
+["The Good King Tavern","Queen Village","French","Dinner","Sit down","Nice",3.5,4,7.5,"$$$","614 S 7th St, Philadelphia, PA 19147",39.941738,-75.154186],
+["Tuna Bar","Old City","Sushi","Dinner","Sit down","Nice",3.5,4,7.5,"$$$","205 Race St, Philadelphia, PA 19106",39.9539367,-75.1434334],
+["48 Record Bar","Old City","American","Bar","Sit down","Nice",3.5,3.5,7,"$$","48 S 2nd St, Philadelphia, PA 19106",39.9488010,-75.1441287],
+["A.Bar","Rittenhouse","American","Bar","Sit down","Nice",3.5,3.5,7,"$$","1737 Walnut St, Philadelphia, PA 19103",39.9502085,-75.1705347],
+["Bar Hygge","Fairmount","American","Bar","Sit down","Casual",3.5,3.5,7,"$$","1720 Fairmount Ave, Philadelphia, PA 19130",39.9670061,-75.1660941],
+["Bar Jawn","Manayunk","Italian","Dinner/Bar","Sit down","Casual",3.5,3.5,7,"$$","4247 Main St, Philadelphia, PA 19127",40.0245982,-75.2211391],
+["Borromini","Rittenhouse","Italian","Dinner","Sit down","Nice",3,4,7,"$$$","1805 Walnut St, Philadelphia, PA 19103",39.9503663,-75.1708913],
+["Cleo Bagels","West Philadelphia","Bagels","Breakfast","Take out","Casual",4,3,7,"$","5013 Baltimore Ave, Philadelphia, PA 19143",39.9481179,-75.2239995],
+["Comfort and Floyd","South Philadelphia","American","Breakfast","Sit down","Casual",4,3,7,"$$","1301 S 11th St, Philadelphia, PA 19147",39.9333427,-75.1620432],
+["Condesa","Center City West","Mexican","Dinner/Bar","Sit down","Nice",3,4,7,"$$$","1830 Ludlow St, Philadelphia, PA 19103",39.9524574,-75.1713256],
+["El Chingon","East Passyunk","Mexican","Dinner","Sit down","Nice",3.5,3.5,7,"$$$","1524 S 10th St, Philadelphia, PA 19147",39.9301165,-75.1616126],
+["El Techo","Center City West","Mexican","Bar","Sit down","Nice",3,4,7,"$$","1830 Ludlow St (11th Fl), Philadelphia, PA 19103",39.9525222,-75.1712612],
+["El Vez","Center City East","Mexican","Dinner","Sit down","Nice",3.5,3.5,7,"$$","121 S 13th St, Philadelphia, PA 19107",39.949702,-75.1617703],
+["Freida","Old City","European","Breakfast","Sit down","Casual",4,3,7,"$$","320 Walnut St, Philadelphia, PA 19106",39.9471206,-75.1470526],
+["Harp & Crown","Center City West","American","Dinner","Sit down","Nice",3,4,7,"$$$","1525 Sansom St, Philadelphia, PA 19102",39.9505176,-75.1668032],
+["Kiddo","Washington Square West","American","Dinner","Sit down","Nice",3.5,3.5,7,"$$$","1138 Pine St, Philadelphia, PA 19107",39.9449242,-75.1612338],
+["L'Anima","Grad Hospital","Italian","Dinner","Sit down","Nice",3.5,3.5,7,"$$$","1001 S 17th St, Philadelphia, PA 19146",39.939457,-75.1712635],
+["Mission Taqueria","Center City West","Mexican","Dinner","Sit down","Casual",3.5,3.5,7,"$$","1516 Sansom St 2nd Fl, Philadelphia, PA 19102",39.9502216,-75.1665529],
+["Monk's Cafe","Center City West","European","Dinner","Sit down","Casual",3.5,3.5,7,"$$","264 S 16th St, Philadelphia, PA 19102",39.947701,-75.168124],
+["Paffuto","Italian Market","Italian","Breakfast/Lunch","Take out/Sit down","Nice",4,3,7,"$$","1009 S 8th St, Philadelphia, PA 19147",39.936848,-75.1564876],
+["Paulie Gees","Washington Square West","Pizza","Dinner/Bar","Take out/Sit down","Casual",3.5,3.5,7,"$$","412 S 13th St, Philadelphia, PA 19147",39.9448943,-75.1632679],
+["Pizzeria Beddia","Fishtown","Pizza","Dinner","Sit down","Nice",4,3,7,"$$$","1313 N Lee St, Philadelphia, PA 19125",39.9706821,-75.1352607],
+["Stateside","East Passyunk","American","Bar","Bar","Casual",3.5,3.5,7,"$$","1536 Passyunk Ave, Philadelphia, PA 19147",39.9302135,-75.1631905],
+["Stogie Joes","East Passyunk","Italian","Dinner","Sit down","Casual",4,3,7,"$$","1801 Passyunk Ave, Philadelphia, PA 19148",39.9275013,-75.1659813],
+["Time","Center City East","American","Dinner/Bar","Sit down","Nice",3,4,7,"$$$","1315 Sansom St, Philadelphia, PA 19107",39.9500362,-75.162516],
+["Triangle Tavern","East Passyunk","American","Bar","Sit down","Casual",3.5,3.5,7,"$$","1338 S 10th St, Philadelphia, PA 19147",39.9323458,-75.1611108],
+["Tu Rinconcito","Old City","Mexican","Breakfast/Lunch","Sit down/take out","Casual",4,3,7,"$$","17 N 3rd St, Philadelphia, PA 19106",39.9508207,-75.1453145],
+["Amada","Old City","Tapas","Dinner","Sit down","Nice",3.5,3,6.5,"$$$","217-219 Chestnut St, Philadelphia, PA 19106",39.948655,-75.144893],
+["Barbuzzo","Center City East","Mediterranean","Dinner","Sit down","Nice",3.5,3,6.5,"$$","110 S 13th St, Philadelphia, PA 19107",39.9500062,-75.1621608],
+["Barcelona Wine Bar","East Passyunk","Tapas","Dinner","Sit down","Nice",3,3.5,6.5,"$$","1709 Passyunk Ave, Philadelphia, PA 19148",39.9281465,-75.1652573],
+["Butcher Bar","Center City West","American","Dinner","Sit down","Nice",3,3.5,6.5,"$$$","2034 Chestnut St, Philadelphia, PA 19103",39.9520979,-75.1748987],
+["Double Knot","Center City East","Asian","Dinner","Sit down","Nice",3,3.5,6.5,"$$$","120 S 13th St, Philadelphia, PA 19107",39.9496356,-75.1621019],
+["El Rey","Center City West","Mexican","Dinner/Bar","Sit down","Casual",3,3.5,6.5,"$$","2013 Chestnut St, Philadelphia, PA 19103",39.9522506,-75.1740289],
+["Emmy Squared","Queen Village","Pizza","Dinner","Sit down","Nice",3,3.5,6.5,"$$","632 S 5th St, Philadelphia, PA 19147",39.9410432,-75.1511227],
+["Forsythia","Old City","French","Dinner","Sit down","Nice",3,3.5,6.5,"$$$","233 Chestnut St, Philadelphia, PA 19105",39.9487084,-75.1454168],
+["Han Dynasty","Old City","Chinese","Dinner","Sit down/take out","Casual",3.5,3,6.5,"$$","110 Chestnut St, Philadelphia, PA 19106",39.9480692,-75.1430342],
+["Herman's Cafe","South Philadelphia","American","Cafe","Take out","Casual",3.5,3,6.5,"$","1313 S 3rd St, Philadelphia, PA 19147",39.9313758,-75.1497382],
+["High Street","Washington Square","American","Dinner","Sit down","Nice",3.5,3,6.5,"$$$","101 S 9th St Suite 106, Philadelphia, PA 19107",39.9494611,-75.1554684],
+["Jack's Firehouse","Fairmount","American","Dinner","Sit down","Nice",3,3.5,6.5,"$$","2130 Fairmount Ave, Philadelphia, PA 19130",39.9671974,-75.1732844],
+["Kanella","Washington Square West","Greek","Dinner","Sit down","Nice",3.5,3,6.5,"$$$","1001 Spruce St, Philadelphia, PA 19107",39.9463051,-75.1579576],
+["Kinme","Washington Square West","Sushi","Dinner","Sit down","Casual",3.5,3,6.5,"$$$","1117 Locust St, Philadelphia, PA 19107",39.9477484,-75.1601866],
+["LMNO","Fishtown","Mexican","Dinner/Bar","Sit down","Nice",3,3.5,6.5,"$$$","1739 N Front St, Philadelphia, PA 19122",39.9761483,-75.1339286],
+["Next of Kin","Fishtown","American","Bar","Sit down","Nice",3,3.5,6.5,"$$","1414 Frankford Ave, Philadelphia, PA 19125",39.9721511,-75.1345316],
+["The Dandelion","Rittenhouse","British","Dinner","Sit down","Nice",3,3.5,6.5,"$$$","124 S 18th St, Philadelphia, PA 19103",39.9509989,-75.1706311],
+["The Dutch","East Passyunk","European","Breakfast","Sit down","Casual",3.5,3,6.5,"$$","1537 S 11th St, Philadelphia, PA 19147",39.9298684,-75.1628947],
+["The Kettle Black","Northern Liberties","American","Breakfast","Take out","Casual",4.5,2,6.5,"$","631 N 2nd St, Philadelphia, PA 19123",39.9616446,-75.1409517],
+["Bing Bing Dim Sum","East Passyunk","Asian","Dinner","Sit down","Nice",3,3,6,"$$","1648 Passyunk Ave, Philadelphia, PA 19148",39.9289547,-75.1647054,true],
+["Cheu Fishtown","Fishtown","Sushi","Dinner","Sit down","Nice",3,3,6,"$$$","Closed — last known: Fishtown, Philadelphia, PA",null,null,true],
+["Essen Bakery","East Passyunk","American","Bakery","Take out","Casual",3.5,2.5,6,"$","1437 Passyunk Ave, Philadelphia, PA 19147",39.9310369,-75.1618413,true],
+["Varga Bar","Washington Square West","American","Dinner/Bar","Sit down/take out","Casual",3,3,6,"$$","941 Spruce St, Philadelphia, PA 19107",39.9462352,-75.1577886,true],
+["1518 Bar & Grill","Center City West","American","Bar","Sit down","Casual",3,3,6,"$$","1518 Sansom St, Philadelphia, PA 19102",39.9503664,-75.1666157],
+["Angelos Pizzeria","Italian Market","American","Lunch","Take out","Casual",4,2,6,"$","736 S 9th St, Philadelphia, PA 19147",39.9406572,-75.1576747],
+["Barclay Prime","Rittenhouse","Steak","Dinner","Sit down","Fancy",2.5,3.5,6,"$$$$","237 S 18th St, Philadelphia, PA 19103",39.9484864,-75.1707607],
+["Barts Bagels","West Philadelphia","Bagels","Breakfast","Take out","Casual",4,2,6,"$","3945 Lancaster Ave, Philadelphia, PA 19104",39.9627522,-75.2012518],
+["Bloomsday","Head House Square","American","Dinner","Sit down","Nice",3,3,6,"$$","414 S 2nd St, Philadelphia, PA 19147",39.9427774,-75.1456566],
+["Caribou Cafe","Center City East","French","Dinner","Sit down","Nice",2.5,3.5,6,"$$","1126 Walnut St, Philadelphia, PA 19107",39.9487806,-75.1602747],
+["Continental Mid Town","Center City West","American","Dinner","Sit down","Nice",3,3,6,"$$$","1801 Chestnut St, Philadelphia, PA 19103",39.9518644,-75.1704634]
+];
+
+const DATA_from = (rawArr) => rawArr.map((r,i) => ({
+  id:i, name:r[0], hood:r[1], cuisine:r[2], meal:r[3], service:r[4], vibe:r[5],
+  food:r[6], ambiance:r[7], total:r[8], price:r[9], address:r[10], lat:r[11], lng:r[12], closed: !!r[13]
+}));
+
+let DATA = DATA_from(FALLBACK_RAW);
+
+// Cache of known addresses/coordinates keyed by cleaned restaurant name, so re-syncing
+// the sheet doesn't need to re-geocode places we've already located.
+const LOCATION_CACHE = {};
+DATA.forEach(d=>{
+  LOCATION_CACHE[d.name.toLowerCase()] = { address:d.address, lat:d.lat, lng:d.lng };
+});
+
+// ---- Live spreadsheet sync ----
+// Paste the CSV export link for your published Google Sheet here.
+// Format: https://docs.google.com/spreadsheets/d/SHEET_ID/export?format=csv&gid=TAB_GID
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1htL-32NU0n9UI8KvgXlxDRqpicWtXl7Dhrk65emCz5c/export?format=csv&gid=0";
+
+async function geocode(name, hood){
+  const query = `${name}, ${hood}, Philadelphia, PA`;
+  try{
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`);
+    const json = await res.json();
+    if(json && json[0]){
+      return { address: json[0].display_name.split(',').slice(0,3).join(',').trim(), lat: parseFloat(json[0].lat), lng: parseFloat(json[0].lon) };
+    }
+  }catch(e){ /* ignore, fall through */ }
+  return { address: `${hood}, Philadelphia, PA (address not yet located)`, lat: null, lng: null };
+}
+
+function parseSheetRows(rows){
+  return rows
+    .filter(r => r['Name'] && r['Name'].trim())
+    .map(r => {
+      let name = r['Name'].trim();
+      let closed = false;
+      const closedMatch = name.match(/^\[CLOSED\]\s*/i);
+      if(closedMatch){ closed = true; name = name.replace(closedMatch[0], '').trim(); }
+      return {
+        name,
+        hood: (r['Location']||'').trim(),
+        cuisine: (r['Type of Food']||'').trim(),
+        meal: (r['Type of Meal']||'').trim(),
+        service: (r['Sit down/Take out']||'').trim(),
+        vibe: (r['Fancy/Nice/Casual']||'').trim(),
+        food: parseFloat(r['Food']) || 0,
+        ambiance: parseFloat(r['Ambiance']) || 0,
+        total: parseFloat(r['Total']) || 0,
+        price: (r['Price']||'').trim(),
+        closed
+      };
+    });
+}
+
+async function loadFromSheet(showLoading){
+  const statusBox = document.getElementById('syncStatus');
+  const statusText = document.getElementById('syncText');
+  const syncBtn = document.getElementById('syncBtn');
+  if(showLoading){
+    statusBox.className = 'sync-status';
+    statusText.textContent = 'Syncing with spreadsheet…';
+    syncBtn.disabled = true;
+  }
+  try{
+    const parsed = await new Promise((resolve, reject)=>{
+      Papa.parse(SHEET_CSV_URL, {
+        download:true, header:true, skipEmptyLines:true,
+        complete: results => resolve(results.data),
+        error: err => reject(err)
+      });
+    });
+    const rows = parseSheetRows(parsed);
+    if(!rows.length) throw new Error('No rows found');
+
+    // Merge with cache; geocode anything new (sequential, gentle on the free API).
+    const merged = [];
+    for(const row of rows){
+      const key = row.name.toLowerCase();
+      let loc = LOCATION_CACHE[key];
+      if(!loc){
+        loc = await geocode(row.name, row.hood);
+        LOCATION_CACHE[key] = loc;
+        await new Promise(r=>setTimeout(r, 1000)); // respect Nominatim's rate limit
+      }
+      merged.push([row.name, row.hood, row.cuisine, row.meal, row.service, row.vibe,
+                    row.food, row.ambiance, row.total, row.price, loc.address, loc.lat, loc.lng, row.closed]);
+    }
+
+    DATA = DATA_from(merged);
+    statusBox.className = 'sync-status ok';
+    statusText.textContent = `Synced with your spreadsheet · ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+    rebuildFilterOptions();
+    updateStats();
+    render();
+  }catch(err){
+    statusBox.className = 'sync-status error';
+    statusText.textContent = 'Could not reach spreadsheet — showing last saved list.';
+    console.error(err);
+  }finally{
+    syncBtn.disabled = false;
+  }
+}
+
+const grid = document.getElementById('grid');
+const qEl = document.getElementById('q');
+const hoodEl = document.getElementById('hood');
+const cuisineEl = document.getElementById('cuisine');
+const priceEl = document.getElementById('price');
+const sortEl = document.getElementById('sort');
+const hideClosedEl = document.getElementById('hideClosed');
+const countLine = document.getElementById('countLine');
+const listWrap = document.getElementById('listWrap');
+const mapWrap = document.getElementById('mapWrap');
+const viewBtns = document.querySelectorAll('.view-btn');
+
+let currentView = 'list';
+let leafletMap = null;
+let markerLayer = null;
+
+function getFilteredList(){
+  const q = qEl.value.trim().toLowerCase();
+  const hood = hoodEl.value;
+  const cuisine = cuisineEl.value;
+  const price = priceEl.value;
+  const hideClosed = hideClosedEl.checked;
+
+  let list = DATA.filter(d=>{
+    if(hideClosed && d.closed) return false;
+    if(hood && d.hood!==hood) return false;
+    if(cuisine && d.cuisine!==cuisine) return false;
+    if(price && d.price!==price) return false;
+    if(q && !(d.name.toLowerCase().includes(q) || d.cuisine.toLowerCase().includes(q) || d.hood.toLowerCase().includes(q))) return false;
+    return true;
+  });
+
+  switch(sortEl.value){
+    case 'score-desc': list.sort((a,b)=> b.total-a.total || a.name.localeCompare(b.name)); break;
+    case 'score-asc': list.sort((a,b)=> a.total-b.total || a.name.localeCompare(b.name)); break;
+    case 'az': list.sort((a,b)=> a.name.localeCompare(b.name)); break;
+  }
+  return list;
+}
+
+function initMap(){
+  if(leafletMap) return;
+  leafletMap = L.map('map', { scrollWheelZoom: true }).setView([39.9526, -75.1652], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19
+  }).addTo(leafletMap);
+  markerLayer = L.layerGroup().addTo(leafletMap);
+}
+
+function markerColor(d){
+  if(d.closed) return '#8B8378';
+  if(d.total >= 9) return '#B9932E';
+  return '#A6402F';
+}
+
+function renderMap(list){
+  initMap();
+  markerLayer.clearLayers();
+  const withCoords = list.filter(d=>d.lat && d.lng);
+  withCoords.forEach(d=>{
+    const color = markerColor(d);
+    const icon = L.divIcon({
+      className:'',
+      html:`<div style="width:16px;height:16px;border-radius:50%;background:${color};border:2px solid #EDE6D6;box-shadow:0 1px 4px rgba(0,0,0,0.5);"></div>`,
+      iconSize:[16,16],
+      iconAnchor:[8,8]
+    });
+    const marker = L.marker([d.lat, d.lng], { icon }).addTo(markerLayer);
+    const dirUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d.name + ' ' + d.address)}`;
+    marker.bindPopup(`
+      <p class="popup-name">${d.name}${d.closed ? ' (closed)' : ''}</p>
+      <p class="popup-loc">${d.hood} · ${d.cuisine}</p>
+      <p class="popup-meta">score ${d.total} · ${d.price}</p>
+      <a class="popup-link" href="${dirUrl}" target="_blank" rel="noopener">Directions →</a>
+    `);
+  });
+  if(withCoords.length){
+    const bounds = L.latLngBounds(withCoords.map(d=>[d.lat,d.lng]));
+    leafletMap.fitBounds(bounds, { padding:[30,30] });
+  }
+  setTimeout(()=>{ if(leafletMap) leafletMap.invalidateSize(); }, 50);
+}
+
+function uniqueSorted(arr){ return [...new Set(arr)].sort((a,b)=>a.localeCompare(b)); }
+
+function rebuildFilterOptions(){
+  const prevHood = hoodEl.value;
+  const prevCuisine = cuisineEl.value;
+  hoodEl.innerHTML = '<option value="">All</option>';
+  cuisineEl.innerHTML = '<option value="">All</option>';
+  uniqueSorted(DATA.map(d=>d.hood)).forEach(h=>{
+    const o=document.createElement('option'); o.value=h; o.textContent=h; hoodEl.appendChild(o);
+  });
+  uniqueSorted(DATA.map(d=>d.cuisine)).forEach(c=>{
+    const o=document.createElement('option'); o.value=c; o.textContent=c; cuisineEl.appendChild(o);
+  });
+  if(uniqueSorted(DATA.map(d=>d.hood)).includes(prevHood)) hoodEl.value = prevHood;
+  if(uniqueSorted(DATA.map(d=>d.cuisine)).includes(prevCuisine)) cuisineEl.value = prevCuisine;
+}
+
+function updateStats(){
+  document.getElementById('statTotal').textContent = DATA.filter(d=>!d.closed).length;
+  document.getElementById('statFav').textContent = DATA.filter(d=>d.total>=9 && !d.closed).length;
+  document.getElementById('statHoods').textContent = uniqueSorted(DATA.map(d=>d.hood)).length;
+}
+
+rebuildFilterOptions();
+updateStats();
+
+function render(){
+  const list = getFilteredList();
+  countLine.textContent = `Showing ${list.length} of ${DATA.length} logged`;
+
+  if(currentView === 'map'){
+    renderMap(list);
+    return;
+  }
+
+  grid.innerHTML = '';
+
+  if(list.length===0){
+    grid.innerHTML = '<div class="empty-state">Nothing matches that search — try loosening a filter.</div>';
+    return;
+  }
+
+  list.forEach(d=>{
+    const card = document.createElement('div');
+    card.className = 'card' + (d.closed ? ' is-closed' : '');
+    const isFav = d.total >= 9 && !d.closed;
+    card.innerHTML = `
+      <div class="card-top">
+        <div>
+          <h3>${d.name}</h3>
+          <p class="loc">${d.hood}</p>
+        </div>
+        <div class="stamp ${isFav?'favorite':''}">
+          ${isFav ? '<div class="fav-flag">TOP</div>' : ''}
+          <div class="num">${d.total}</div>
+          <div class="lbl">score</div>
+        </div>
+      </div>
+      <div class="tags">
+        <span class="tag">${d.cuisine}</span>
+        <span class="tag">${d.meal}</span>
+        <span class="tag">${d.vibe}</span>
+      </div>
+      <div class="meta-row">
+        <span class="subscore">food ${d.food} · ambiance ${d.ambiance}</span>
+        <span class="price">${d.price}</span>
+      </div>
+      <div class="address-row">
+        <span class="addr">${d.address}</span>
+        ${d.closed ? '' : `<a class="map-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d.name + ' ' + d.address)}" target="_blank" rel="noopener">Directions →</a>`}
+      </div>
+      ${d.closed ? '<div class="closed-badge">✕ Permanently closed</div>' : ''}
+    `;
+    grid.appendChild(card);
+  });
+}
+
+viewBtns.forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    currentView = btn.dataset.view;
+    viewBtns.forEach(b=>b.classList.toggle('active', b===btn));
+    listWrap.hidden = currentView !== 'list';
+    mapWrap.hidden = currentView !== 'map';
+    render();
+  });
+});
+
+[qEl,hoodEl,cuisineEl,priceEl,sortEl,hideClosedEl].forEach(el=>{
+  el.addEventListener('input', render);
+  el.addEventListener('change', render);
+});
+
+document.getElementById('syncBtn').addEventListener('click', ()=> loadFromSheet(true));
+
+sortEl.value = 'score-desc';
+render();
+loadFromSheet(true);
+</script>
+</body>
+</html>
