@@ -47,8 +47,12 @@
     position:relative;
     padding: 4rem 6vw 3rem;
     background: var(--stripe-gradient);
+    background-size: 160% 100%;
+    background-position: 0% 0%;
+    transition: background-position 1.2s ease;
     overflow:hidden;
   }
+  .hero:hover{ background-position: 100% 0%; }
   .eyebrow{
     font-family:'IBM Plex Mono', monospace;
     letter-spacing:0.18em;
@@ -84,12 +88,20 @@
     line-height:1.5;
   }
   .stat-strip{
-    display:flex; gap: 2.2rem; flex-wrap:wrap;
+    display:inline-flex; gap: 2rem; flex-wrap:wrap;
     margin-top: 2.6rem;
     font-family:'IBM Plex Mono', monospace;
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 0.9rem 1.4rem;
   }
-  .stat-strip div{ font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase; color: var(--cream); opacity:0.85; }
-  .stat-strip strong{ display:block; font-size:1.6rem; color: var(--cream); font-family:'Fraunces',serif; font-weight:600; }
+  .stat-strip div{ font-size:0.65rem; letter-spacing:0.06em; text-transform:uppercase; color: #5f5e5a; }
+  .stat-strip strong{
+    display:block; font-size:1.5rem; font-family:'Fraunces',serif; font-weight:700;
+    background: var(--stripe-gradient);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+
 
   /* ---------- CONTROLS ---------- */
   .controls{
@@ -411,6 +423,7 @@
 
   @media (prefers-reduced-motion: reduce){
     .card{ transition:none; }
+    .hero{ transition:none; }
   }
 </style>
 </head>
