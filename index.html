@@ -46,15 +46,15 @@
   .hero{
     position:relative;
     padding: 4rem 6vw 3rem;
-    background: var(--cream);
+    background: var(--stripe-gradient);
     overflow:hidden;
   }
-  .gradient-stripe{ height:8px; background: var(--stripe-gradient); }
   .eyebrow{
     font-family:'IBM Plex Mono', monospace;
     letter-spacing:0.18em;
     text-transform:uppercase;
-    color: var(--olive);
+    color: var(--cream);
+    opacity:0.85;
     font-size:0.72rem;
     margin:0 0 1rem;
   }
@@ -64,20 +64,21 @@
     font-size: clamp(2.6rem, 7vw, 5.2rem);
     line-height:0.95;
     margin:0;
-    color: var(--cobalt);
+    color: var(--cream);
     max-width: 14ch;
   }
   h1.title em{
     font-style: italic;
     font-weight: 500;
-    color: var(--magenta);
+    color: var(--cream);
   }
   .hero p.sub{
     font-family:'Fraunces', serif;
     font-style:italic;
     font-weight:400;
     font-size: clamp(1rem, 1.6vw, 1.25rem);
-    color: var(--magenta);
+    color: var(--cream);
+    opacity:0.92;
     max-width: 46ch;
     margin: 1.4rem 0 0;
     line-height:1.5;
@@ -87,8 +88,8 @@
     margin-top: 2.6rem;
     font-family:'IBM Plex Mono', monospace;
   }
-  .stat-strip div{ font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase; color: var(--mortar); }
-  .stat-strip strong{ display:block; font-size:1.6rem; color: var(--cobalt); font-family:'Fraunces',serif; font-weight:600; }
+  .stat-strip div{ font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase; color: var(--cream); opacity:0.85; }
+  .stat-strip strong{ display:block; font-size:1.6rem; color: var(--cream); font-family:'Fraunces',serif; font-weight:600; }
 
   /* ---------- CONTROLS ---------- */
   .controls{
@@ -180,7 +181,7 @@
     flex-shrink:0;
     width:52px; height:52px;
     border-radius:50%;
-    background: var(--magenta);
+    background: var(--stamp-color, var(--magenta));
     display:flex; align-items:center; justify-content:center;
     flex-direction:column;
     font-family:'IBM Plex Mono', monospace;
@@ -190,7 +191,7 @@
   }
   .stamp .num, .stamp .lbl{ color: var(--cream); transition: color .25s ease; }
   .stamp:hover{ background: var(--white); transform: rotate(4deg) scale(1.08); }
-  .stamp:hover .num, .stamp:hover .lbl{ color: var(--magenta); }
+  .stamp:hover .num, .stamp:hover .lbl{ color: var(--stamp-color, var(--magenta)); }
   .stamp.favorite{ border: 2px solid var(--rust); }
   .stamp .num{ font-size:1.05rem; font-weight:600; line-height:1; }
   .stamp .lbl{ font-size:0.42rem; letter-spacing:0.06em; text-transform:uppercase; }
@@ -426,8 +427,6 @@
   </div>
 </div>
 
-<div class="gradient-stripe"></div>
-
 <div class="controls">
   <div class="field grow">
     <label for="q">Search</label>
@@ -479,8 +478,7 @@
 <div class="map-wrap" id="mapWrap" hidden>
   <div id="map"></div>
   <div class="map-legend">
-    <span><i class="dot fav"></i> Top scorer (9+)</span>
-    <span><i class="dot std"></i> Logged</span>
+    <span>Lower score <i class="dot" style="background:#96004B"></i> &rarr; <i class="dot" style="background:#0047BB"></i> Higher score</span>
     <span><i class="dot closed"></i> Closed</span>
   </div>
 </div>
@@ -876,18 +874,34 @@ function initMap(){
   markerLayer = L.layerGroup().addTo(leafletMap);
 }
 
-function markerColor(d){
+function scoreColor(score, min, max){
+  const range = (max - min) || 1;
+  const t = Math.max(0, Math.min(1, (score - min) / range));
+  const low = [0x96,0x00,0x4B], high = [0x00,0x47,0xBB];
+  const r = Math.round(low[0] + (high[0]-low[0])*t);
+  const g = Math.round(low[1] + (high[1]-low[1])*t);
+  const b = Math.round(low[2] + (high[2]-low[2])*t);
+  return '#' + [r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+
+function getScoreRange(){
+  const scores = DATA.filter(d=>!d.closed).map(d=>d.total);
+  if(!scores.length) return { min:0, max:10 };
+  return { min: Math.min(...scores), max: Math.max(...scores) };
+}
+
+function markerColor(d, range){
   if(d.closed) return '#b6ada0';
-  if(d.total >= 9) return '#96004B';
-  return '#0047BB';
+  return scoreColor(d.total, range.min, range.max);
 }
 
 function renderMap(list){
   initMap();
   markerLayer.clearLayers();
   const withCoords = list.filter(d=>d.lat && d.lng);
+  const range = getScoreRange();
   withCoords.forEach(d=>{
-    const color = markerColor(d);
+    const color = markerColor(d, range);
     const icon = L.divIcon({
       className:'',
       html:`<div style="width:16px;height:16px;border-radius:50%;background:${color};border:2px solid #EDE6D6;box-shadow:0 1px 4px rgba(0,0,0,0.5);"></div>`,
@@ -960,17 +974,20 @@ function render(){
     return;
   }
 
+  const scoreRange = getScoreRange();
+
   list.forEach(d=>{
     const card = document.createElement('div');
     card.className = 'card' + (d.closed ? ' is-closed' : '');
     const isFav = d.total >= 9 && !d.closed;
+    const stampColor = scoreColor(d.total, scoreRange.min, scoreRange.max);
     card.innerHTML = `
       <div class="card-top">
         <div>
           <h3>${d.name}</h3>
           <p class="loc">${d.hood}</p>
         </div>
-        <div class="stamp ${isFav?'favorite':''}">
+        <div class="stamp ${isFav?'favorite':''}" style="--stamp-color:${stampColor}">
           ${isFav ? '<div class="fav-flag">TOP</div>' : ''}
           <div class="num">${d.total}</div>
           <div class="lbl">score</div>
