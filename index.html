@@ -498,14 +498,98 @@
     cursor:pointer;
   }
   .quiz-submit:hover{ background: var(--magenta-deep); }
+  .freestyle-card{ text-align:left; }
+  .freestyle-hint{
+    font-family:'Inter', sans-serif; font-size:0.85rem; color: var(--mortar);
+    margin:0 0 1.4rem; max-width:56ch; line-height:1.5;
+  }
+  .freestyle-row{ display:flex; gap:0.8rem; flex-wrap:wrap; }
+  .freestyle-row input{
+    flex:1 1 280px; min-width:0;
+    font-family:'Inter', sans-serif; font-size:0.95rem;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid var(--ink); border-radius:6px;
+    background:#fff; color:var(--ink);
+  }
+  .freestyle-row .quiz-submit{ margin-top:0; white-space:nowrap; }
+  .surprise-btn{
+    display:block; margin: 1rem auto 0;
+    font-family:'IBM Plex Mono', monospace; font-size:0.75rem; font-weight:600;
+    color: var(--cobalt); background:none; border:none; cursor:pointer;
+    text-decoration:underline;
+  }
+  .surprise-btn:hover{ color: var(--cobalt-deep); }
+  .quiz-divider{
+    display:flex; align-items:center; gap:1rem;
+    max-width:760px; margin:1.6rem auto; color: var(--cream);
+    font-family:'IBM Plex Mono', monospace; font-size:0.68rem; text-transform:uppercase; letter-spacing:0.08em;
+    opacity:0.75;
+  }
+  .quiz-divider::before, .quiz-divider::after{
+    content:''; flex:1; height:1px; background: rgba(247,243,234,0.35);
+  }
   .quiz-results{ max-width: 760px; margin: 2rem auto 0; display:grid; gap:1rem; }
   .quiz-result-card{
     background: var(--cream); color: var(--ink);
     border-radius: 10px; padding: 1.3rem 1.6rem;
     border: 1px solid var(--card-border-on-green);
     position:relative;
+    animation: revealCard .45s cubic-bezier(.2,.8,.3,1.2) backwards;
+  }
+  @keyframes revealCard{
+    from{ opacity:0; transform: translateY(14px) scale(0.97); }
+    to{ opacity:1; transform: translateY(0) scale(1); }
   }
   .quiz-result-card.top{ border: 2px solid var(--rust); }
+  .quiz-lede{
+    font-family:'Fraunces', serif; font-style:italic; font-weight:500;
+    font-size:1.05rem; color:#fff;
+    text-align:center; margin: 0 0 1rem;
+  }
+  .try-again-row{ text-align:center; margin-top:1.2rem; }
+  .try-again-btn{
+    font-family:'IBM Plex Mono', monospace; font-size:0.72rem; font-weight:600;
+    color: var(--cream); background:none; border:1.5px solid var(--cream); border-radius:20px;
+    padding:0.5rem 1.1rem; cursor:pointer;
+  }
+  .try-again-btn:hover{ background: rgba(247,243,234,0.15); }
+  .roulette-box{
+    max-width:560px; margin:0 auto; text-align:center;
+    background: var(--cream); border-radius:12px; padding:2.6rem 1.5rem;
+    border: 1px solid var(--card-border-on-green);
+  }
+  .roulette-label{
+    font-family:'IBM Plex Mono', monospace; font-size:0.68rem; text-transform:uppercase;
+    letter-spacing:0.1em; color: var(--mortar); margin:0 0 1rem;
+  }
+  .roulette-name{
+    font-family:'Fraunces', serif; font-weight:600; font-size:1.8rem;
+    color: var(--magenta); margin:0;
+    filter: blur(0.3px);
+  }
+  .roulette-name.roulette-landed{
+    color: var(--cobalt);
+    animation: rouletteLand .4s ease;
+  }
+  @keyframes rouletteLand{
+    0%{ transform: scale(1.15); }
+    60%{ transform: scale(0.97); }
+    100%{ transform: scale(1); }
+  }
+  .share-row{ margin-top:1rem; text-align:right; }
+  .share-btn{
+    font-family:'IBM Plex Mono', monospace; font-size:0.68rem; font-weight:600;
+    color: var(--cobalt); background:none; border:none; cursor:pointer;
+    text-decoration:underline;
+  }
+  .share-btn:hover{ color: var(--cobalt-deep); }
+  .share-btn.copied{ color: var(--olive); text-decoration:none; }
+  .rm-shared-badge{
+    display:inline-block; font-family:'IBM Plex Mono', monospace; font-size:0.65rem;
+    font-weight:600; text-transform:uppercase; letter-spacing:0.06em;
+    color: var(--rust); border:1px solid var(--rust); border-radius:20px;
+    padding:0.25rem 0.7rem; margin:0 0 0.8rem;
+  }
   .quiz-rank{
     font-family:'IBM Plex Mono', monospace;
     font-size:0.65rem; text-transform:uppercase; letter-spacing:0.08em;
@@ -705,6 +789,19 @@
 </div>
 
 <div class="quiz-wrap" id="recommendWrap" hidden>
+  <div class="quiz-card freestyle-card">
+    <p class="eyebrow">Just tell me</p>
+    <h2 class="quiz-title">What are you in the mood for?</h2>
+    <p class="freestyle-hint">Type it like you'd text a friend — "cheap tacos near Fishtown," "romantic date night spot," "quick lunch before drinks."</p>
+    <div class="freestyle-row">
+      <input type="text" id="freestyleInput" placeholder="e.g. something cozy and cheap for a rainy night…">
+      <button type="button" id="freestyleSubmit" class="quiz-submit">Find it →</button>
+    </div>
+    <button type="button" id="surpriseBtn" class="surprise-btn">Surprise me instead →</button>
+  </div>
+
+  <div class="quiz-divider"><span>or answer a few questions</span></div>
+
   <div class="quiz-card">
     <p class="eyebrow">Tell me what you're after</p>
     <h2 class="quiz-title">What are we picking tonight?</h2>
@@ -1385,10 +1482,12 @@ const reviewModalBody = document.getElementById('reviewModalBody');
 
 let modalLeafletMap = null;
 
-function openReviewModal(d){
+function openReviewModal(d, options){
+  options = options || {};
   const noteTags = extractNoteTags(d.notes);
   const hasNotes = !!(d.notes && d.notes.trim());
   reviewModalBody.innerHTML = `
+    ${options.shared ? '<p class="rm-shared-badge">Shared with you</p>' : ''}
     <h2>${d.name}${d.closed ? ' (closed)' : ''}</h2>
     <p class="rm-loc">${d.hood} · ${d.cuisine}</p>
     <div class="rm-meta">
@@ -1403,8 +1502,10 @@ function openReviewModal(d){
     ${noteTags.length ? `<div class="rm-tags">${noteTags.map(t=>`<span class="tag note-tag">${t}</span>`).join('')}</div>` : ''}
     <p class="rm-addr">${d.address}</p>
     ${d.lat ? '<div class="rm-map" id="reviewModalMap"></div>' : ''}
+    <div class="share-row">${shareButtonHtml(d.name)}</div>
   `;
   reviewModalOverlay.hidden = false;
+  wireShareButtons(reviewModalBody);
 
   if(modalLeafletMap){ modalLeafletMap.remove(); modalLeafletMap = null; }
   if(d.lat && d.lng){
@@ -1468,6 +1569,8 @@ function scoreCandidate(d, answers){
   if(answers.price){
     score += (answers.price === d.price) ? 60 : -25;
   }
+  if(answers.priceBias === 'low'){ score += (d.price.length <= 2) ? 40 : -25; }
+  if(answers.priceBias === 'high'){ score += (d.price.length >= 3) ? 40 : -20; }
   if(answers.vibe){
     score += (answers.vibe === d.vibe) ? 45 : -10;
   }
@@ -1480,6 +1583,10 @@ function scoreCandidate(d, answers){
   if(answers.cuisine){
     score += (answers.cuisine === d.cuisine) ? 60 : -40;
   }
+  if(answers.desiredTags && answers.desiredTags.length){
+    const dTags = allTagsFor(d);
+    answers.desiredTags.forEach(t=>{ if(dTags.includes(t)) score += 35; });
+  }
   return score;
 }
 
@@ -1488,11 +1595,97 @@ function whyPicked(d, answers){
   if(answers.cuisine && answers.cuisine === d.cuisine) reasons.push(`it's ${d.cuisine.toLowerCase()}`);
   if(answers.vibe && answers.vibe === d.vibe) reasons.push(`fits a ${d.vibe.toLowerCase()} night`);
   if(answers.price && answers.price === d.price) reasons.push(`right in your ${d.price} budget`);
+  if(answers.priceBias === 'low' && d.price.length <= 2) reasons.push('easy on the wallet');
+  if(answers.priceBias === 'high' && d.price.length >= 3) reasons.push('worth the splurge');
   if(answers.hood && answers.hood === d.hood) reasons.push(`it's in ${d.hood}`);
   if(answers.meal && d.meal.toLowerCase().includes(answers.meal.toLowerCase())) reasons.push(`works for ${answers.meal.toLowerCase()}`);
+  if(answers.desiredTags && answers.desiredTags.length){
+    const dTags = allTagsFor(d);
+    answers.desiredTags.forEach(t=>{ if(dTags.includes(t)) reasons.push(t.toLowerCase()); });
+  }
   if(d.total >= 9) reasons.push('it\'s one of the highest-scored spots on the list');
   if(!reasons.length) reasons.push(`it scored a strong ${d.total} overall`);
   return reasons.slice(0,3).join(', ');
+}
+
+// Parses a freestyle sentence into the same answer shape the structured quiz uses.
+function parseFreestyle(text){
+  const lower = text.toLowerCase();
+  const answers = { vibe:'', price:'', meal:'', hood:'', cuisine:'', priceBias:null, desiredTags:[] };
+
+  const cuisines = uniqueSorted(DATA.filter(d=>!d.closed).map(d=>d.cuisine));
+  for(const c of cuisines){ if(lower.includes(c.toLowerCase())){ answers.cuisine = c; break; } }
+
+  const hoods = uniqueSorted(DATA.filter(d=>!d.closed).map(d=>d.hood));
+  for(const h of hoods){ if(lower.includes(h.toLowerCase())){ answers.hood = h; break; } }
+
+  if(/\b(cheap|budget|inexpensive|affordable|broke)\b/.test(lower)) answers.priceBias = 'low';
+  if(/\b(fancy|splurge|expensive|pricey|upscale)\b/.test(lower)) answers.priceBias = 'high';
+
+  if(/\b(romantic|date night|date spot|anniversary)\b/.test(lower)) answers.vibe = 'Nice';
+  else if(/\b(casual|low-?key|chill|laid-?back)\b/.test(lower)) answers.vibe = 'Casual';
+  else if(/\b(special occasion|celebrat|birthday|fanciest|fine dining)\b/.test(lower)) answers.vibe = 'Fancy';
+
+  if(/\bbrunch\b/.test(lower)) answers.meal = 'Breakfast';
+  else if(/\bbreakfast\b/.test(lower)) answers.meal = 'Breakfast';
+  else if(/\bdinner\b/.test(lower)) answers.meal = 'Dinner';
+  else if(/\b(drinks?|cocktails?|happy hour|nightcap)\b/.test(lower)) answers.meal = 'Bar';
+
+  NOTE_TAG_RULES.forEach(rule=>{ if(rule.pattern.test(lower)) answers.desiredTags.push(rule.tag); });
+
+  return answers;
+}
+
+const LEDE_LINES = [
+  "Tonight's verdict:",
+  "The spreadsheet has spoken:",
+  "Here's your move:",
+  "Bon appétit — go here:",
+  "Reservation-worthy pick:",
+  "This one's calling your name:"
+];
+
+function runRecommendation(answers, options){
+  options = options || {};
+  const candidates = DATA.filter(d => !d.closed && (!options.excludeId || d.id !== options.excludeId));
+  const ranked = candidates
+    .map(d => ({ d, score: scoreCandidate(d, answers) }))
+    .sort((a,b) => b.score - a.score)
+    .slice(0, 3);
+
+  const resultsEl = document.getElementById('quizResults');
+  if(!ranked.length){
+    resultsEl.innerHTML = '<div class="quiz-empty">Nothing matched — try loosening a preference, or hit Surprise Me.</div>';
+    return;
+  }
+
+  const lede = LEDE_LINES[Math.floor(Math.random()*LEDE_LINES.length)];
+
+  resultsEl.innerHTML = `<p class="quiz-lede">${lede}</p>` + ranked.map(({d}, i) => `
+    <div class="quiz-result-card ${i===0 ? 'top' : ''}" style="animation-delay:${i*0.08}s">
+      <p class="quiz-rank">${i===0 ? 'Top pick' : `Also consider · #${i+1}`}</p>
+      <h3>${d.name}</h3>
+      <p class="loc">${d.hood} · ${d.cuisine} · ${d.price}</p>
+      <div class="meta-row">
+        <span class="subscore">food ${d.food} · ambiance ${d.ambiance}</span>
+        <span class="price">score ${d.total}</span>
+      </div>
+      <p class="quiz-why">Because ${whyPicked(d, answers)}.</p>
+      ${d.address ? `<div class="address-row"><span class="addr">${d.address}</span><a class="map-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d.name + ' ' + d.address)}" target="_blank" rel="noopener">Directions →</a></div>` : ''}
+      ${i===0 ? `<div class="share-row">${shareButtonHtml(d.name)}</div>` : ''}
+    </div>
+  `).join('') + `
+    <div class="try-again-row">
+      <button type="button" class="try-again-btn" id="tryAgainBtn">Not feeling it — try another →</button>
+    </div>
+  `;
+
+  const tryAgainBtn = document.getElementById('tryAgainBtn');
+  if(tryAgainBtn){
+    tryAgainBtn.addEventListener('click', ()=> runRecommendation(answers, { excludeId: ranked[0].d.id }));
+  }
+  wireShareButtons(resultsEl);
+  resultsEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
 }
 
 document.getElementById('quizSubmit').addEventListener('click', ()=>{
@@ -1503,32 +1696,109 @@ document.getElementById('quizSubmit').addEventListener('click', ()=>{
     hood: document.getElementById('quizHood').value,
     cuisine: document.getElementById('quizCuisine').value
   };
+  runRecommendation(answers);
+});
 
-  const candidates = DATA.filter(d => !d.closed);
-  const ranked = candidates
-    .map(d => ({ d, score: scoreCandidate(d, answers) }))
-    .sort((a,b) => b.score - a.score)
-    .slice(0, 3);
+document.getElementById('freestyleSubmit').addEventListener('click', ()=>{
+  const text = document.getElementById('freestyleInput').value.trim();
+  if(!text) return;
+  runRecommendation(parseFreestyle(text));
+});
+document.getElementById('freestyleInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') document.getElementById('freestyleSubmit').click();
+});
 
+function getShareUrl(name){
+  const url = new URL(location.href);
+  url.search = '';
+  url.hash = '';
+  url.searchParams.set('rec', name);
+  return url.toString();
+}
+
+function shareButtonHtml(name){
+  return `<button type="button" class="share-btn" data-share-name="${name.replace(/"/g,'&quot;')}">Copy share link →</button>`;
+}
+
+function wireShareButtons(container){
+  container.querySelectorAll('.share-btn').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const url = getShareUrl(btn.dataset.shareName);
+      try{
+        await navigator.clipboard.writeText(url);
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(()=>{ btn.textContent = original; btn.classList.remove('copied'); }, 1800);
+      }catch(e){
+        prompt('Copy this link:', url);
+      }
+    });
+  });
+}
+
+function runRoulette(candidates, finalPick, onDone){
   const resultsEl = document.getElementById('quizResults');
-  if(!ranked.length){
-    resultsEl.innerHTML = '<div class="quiz-empty">Nothing matched — try loosening a preference.</div>';
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    onDone();
     return;
   }
-
-  resultsEl.innerHTML = ranked.map(({d}, i) => `
-    <div class="quiz-result-card ${i===0 ? 'top' : ''}">
-      <p class="quiz-rank">${i===0 ? 'Top pick' : `Also consider · #${i+1}`}</p>
-      <h3>${d.name}</h3>
-      <p class="loc">${d.hood} · ${d.cuisine} · ${d.price}</p>
-      <div class="meta-row">
-        <span class="subscore">food ${d.food} · ambiance ${d.ambiance}</span>
-        <span class="price">score ${d.total}</span>
-      </div>
-      <p class="quiz-why">Because ${whyPicked(d, answers)}.</p>
-      ${d.address ? `<div class="address-row"><span class="addr">${d.address}</span><a class="map-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d.name + ' ' + d.address)}" target="_blank" rel="noopener">Directions →</a></div>` : ''}
+  resultsEl.innerHTML = `
+    <div class="roulette-box">
+      <p class="roulette-label">Spinning the wheel…</p>
+      <p class="roulette-name" id="rouletteName">${candidates[0].name}</p>
     </div>
-  `).join('');
+  `;
+  const nameEl = document.getElementById('rouletteName');
+  const totalSpins = 22;
+  let i = 0;
+
+  function tick(){
+    const delay = 40 + Math.pow(i / totalSpins, 2.2) * 260; // ease out
+    nameEl.textContent = candidates[Math.floor(Math.random()*candidates.length)].name;
+    i++;
+    if(i < totalSpins){
+      setTimeout(tick, delay);
+    }else{
+      nameEl.textContent = finalPick.name;
+      nameEl.classList.add('roulette-landed');
+      setTimeout(onDone, 500);
+    }
+  }
+  tick();
+}
+
+document.getElementById('surpriseBtn').addEventListener('click', ()=>{
+  const candidates = DATA.filter(d => !d.closed);
+  if(!candidates.length) return;
+  // weight toward higher scores without always picking the single top spot
+  const weighted = candidates.flatMap(d => Array(Math.max(1, Math.round((d.total-3)*2))).fill(d));
+  const pick = weighted[Math.floor(Math.random()*weighted.length)];
+  const resultsEl = document.getElementById('quizResults');
+
+  runRoulette(candidates, pick, ()=>{
+    const lede = "Fate has chosen:";
+    resultsEl.innerHTML = `<p class="quiz-lede">${lede}</p>
+      <div class="quiz-result-card top">
+        <p class="quiz-rank">Surprise pick</p>
+        <h3>${pick.name}</h3>
+        <p class="loc">${pick.hood} · ${pick.cuisine} · ${pick.price}</p>
+        <div class="meta-row">
+          <span class="subscore">food ${pick.food} · ambiance ${pick.ambiance}</span>
+          <span class="price">score ${pick.total}</span>
+        </div>
+        <p class="quiz-why">No overthinking it — just go.</p>
+        ${pick.address ? `<div class="address-row"><span class="addr">${pick.address}</span><a class="map-link" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pick.name + ' ' + pick.address)}" target="_blank" rel="noopener">Directions →</a></div>` : ''}
+        <div class="share-row">${shareButtonHtml(pick.name)}</div>
+      </div>
+      <div class="try-again-row">
+        <button type="button" class="try-again-btn" id="tryAgainBtn">Roll again →</button>
+      </div>
+    `;
+    document.getElementById('tryAgainBtn').addEventListener('click', ()=> document.getElementById('surpriseBtn').click());
+    wireShareButtons(resultsEl);
+    resultsEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  });
 });
 
 sortEl.value = 'score-desc';
@@ -1536,6 +1806,15 @@ render();
 document.getElementById('initialLoader').classList.add('loader-hidden');
 setTimeout(()=> document.getElementById('initialLoader')?.classList.add('loader-hidden'), 4000);
 loadFromSheet(true);
+
+// If someone shared a link to a specific restaurant, open it automatically.
+(function checkSharedLink(){
+  const params = new URLSearchParams(location.search);
+  const recName = params.get('rec');
+  if(!recName) return;
+  const match = DATA.find(d => d.name.toLowerCase() === recName.toLowerCase());
+  if(match) openReviewModal(match, { shared: true });
+})();
 </script>
 </body>
 </html>
