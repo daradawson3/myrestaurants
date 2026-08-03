@@ -110,7 +110,7 @@
     padding: 1.6rem 6vw;
     display:flex; flex-wrap:wrap; gap:0.9rem;
     align-items:center;
-    position:sticky; top:0; z-index:10;
+    position:sticky; top:0; z-index:2000;
     border-bottom: 1px solid #d6cbb0;
     box-shadow: 0 4px 14px rgba(0,0,0,0.15);
   }
@@ -132,9 +132,10 @@
     border-radius: 3px;
     background: #fff;
     color: var(--ink);
+    width:100%;
+    box-sizing:border-box;
   }
-  input[type=text]{ min-width: 190px; }
-  .field.grow{ flex:1; }
+  .field.grow{ flex: 1 1 220px; min-width: 0; }
   .toggle-closed{
     display:flex; align-items:center; gap:0.4rem;
     font-family:'IBM Plex Mono', monospace;
@@ -153,6 +154,36 @@
     padding-top: 0.3rem;
     border-top: 1px dashed #cfc2a1;
     margin-top: 0.4rem;
+  }
+  .active-filters{
+    background: var(--cream);
+    padding: 0 6vw 1rem;
+    display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;
+    border-bottom: 1px solid #d6cbb0;
+  }
+  .active-filters .af-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.65rem; text-transform:uppercase; letter-spacing:0.06em;
+    color: var(--mortar);
+  }
+  .af-chip{
+    display:inline-flex; align-items:center; gap:0.4rem;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.72rem;
+    background: var(--ink); color:#fff;
+    border-radius: 20px;
+    padding: 0.3rem 0.5rem 0.3rem 0.7rem;
+  }
+  .af-chip button{
+    background:none; border:none; color:#fff; cursor:pointer;
+    font-size:0.9rem; line-height:1; padding:0; opacity:0.75;
+  }
+  .af-chip button:hover{ opacity:1; }
+  .af-clear-all{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.7rem; color: var(--rust);
+    background:none; border:none; cursor:pointer;
+    text-decoration:underline;
   }
 
   /* ---------- GRID ---------- */
@@ -173,7 +204,7 @@
   }
   .card:hover{ transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0,0,0,0.35); }
   .card.is-closed{ opacity:0.52; filter: grayscale(0.5); }
-  .card.has-review{ cursor:pointer; }
+  .card{ cursor:pointer; }
   .tag.note-tag{ background: var(--tag-cobalt-bg); color: var(--rust); border: 1px solid var(--rust); }
   .review-excerpt{
     font-family:'Inter', sans-serif;
@@ -243,7 +274,10 @@
     background: var(--tag-olive-bg);
     border: none;
     color: var(--tag-olive-text);
+    cursor:pointer;
+    transition: transform .12s ease, box-shadow .12s ease;
   }
+  .tag:hover{ transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
   .tag:nth-child(n+2){
     background: var(--tag-cobalt-bg);
     color: var(--tag-cobalt-text);
@@ -334,6 +368,12 @@
   .popup-loc{ font-family:'IBM Plex Mono', monospace; font-size:0.65rem; text-transform:uppercase; color:var(--cobalt); margin:0 0 0.5rem; }
   .popup-meta{ font-family:'IBM Plex Mono', monospace; font-size:0.72rem; color:var(--mortar); margin:0 0 0.5rem; }
   .popup-link{ font-family:'IBM Plex Mono', monospace; font-size:0.7rem; color:var(--cobalt); font-weight:600; text-decoration:none; border-bottom:1px solid var(--cobalt); }
+  .popup-tags{ display:flex; flex-wrap:wrap; gap:0.3rem; margin:0 0 0.5rem; }
+  .popup-tags .tag{ font-size:0.6rem; padding:0.15rem 0.4rem; cursor:default; }
+  .popup-tags .tag:hover{ transform:none; box-shadow:none; }
+  .popup-excerpt{ font-family:'Fraunces', serif; font-style:italic; font-size:0.82rem; color:var(--ink); margin:0 0 0.5rem; line-height:1.4; }
+  .popup-addr{ font-family:'IBM Plex Mono', monospace; font-size:0.65rem; color:var(--mortar); margin:0 0 0.5rem; }
+  .popup-links{ display:flex; gap:0.9rem; flex-wrap:wrap; }
   .map-legend{
     display:flex; gap:1.6rem; flex-wrap:wrap;
     margin-top:1rem;
@@ -472,6 +512,22 @@
     white-space: pre-wrap;
   }
   .review-modal .rm-tags{ display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:1.2rem; }
+  .review-modal .rm-empty{
+    font-family:'Fraunces', serif; font-style:italic; color: var(--mortar);
+    font-size:0.95rem; margin:0;
+  }
+  .review-modal .rm-addr{
+    font-family:'IBM Plex Mono', monospace; font-size:0.72rem; color: var(--mortar);
+    margin-top:1.2rem;
+  }
+  .review-modal .rm-map{
+    height: 220px;
+    width:100%;
+    border-radius:8px;
+    border: 1px solid var(--card-border);
+    margin-top:0.6rem;
+    overflow:hidden;
+  }
 
   .closed-badge{
     display:inline-block; margin-top:0.6rem;
@@ -531,6 +587,10 @@
     <select id="cuisine"><option value="">All</option></select>
   </div>
   <div class="field">
+    <label for="tagFilter">Tag</label>
+    <select id="tagFilter"><option value="">All</option></select>
+  </div>
+  <div class="field">
     <label for="price">Price</label>
     <select id="price">
       <option value="">All</option>
@@ -562,6 +622,8 @@
   </div>
   <div class="count-line" id="countLine"></div>
 </div>
+
+<div class="active-filters" id="activeFilters" hidden></div>
 
 <div class="grid-wrap" id="listWrap">
   <div class="grid" id="grid"></div>
@@ -929,6 +991,7 @@ const qEl = document.getElementById('q');
 const hoodEl = document.getElementById('hood');
 const cuisineEl = document.getElementById('cuisine');
 const priceEl = document.getElementById('price');
+const tagFilterEl = document.getElementById('tagFilter');
 const sortEl = document.getElementById('sort');
 const hideClosedEl = document.getElementById('hideClosed');
 const countLine = document.getElementById('countLine');
@@ -941,11 +1004,16 @@ let currentView = 'list';
 let leafletMap = null;
 let markerLayer = null;
 
+function allTagsFor(d){
+  return [d.meal, d.vibe, ...extractNoteTags(d.notes)].filter(Boolean);
+}
+
 function getFilteredList(){
   const q = qEl.value.trim().toLowerCase();
   const hood = hoodEl.value;
   const cuisine = cuisineEl.value;
   const price = priceEl.value;
+  const tag = tagFilterEl.value;
   const hideClosed = hideClosedEl.checked;
 
   let list = DATA.filter(d=>{
@@ -953,6 +1021,7 @@ function getFilteredList(){
     if(hood && d.hood!==hood) return false;
     if(cuisine && d.cuisine!==cuisine) return false;
     if(price && d.price!==price) return false;
+    if(tag && !allTagsFor(d).includes(tag)) return false;
     if(q && !(d.name.toLowerCase().includes(q) || d.cuisine.toLowerCase().includes(q) || d.hood.toLowerCase().includes(q))) return false;
     return true;
   });
@@ -1051,11 +1120,19 @@ function renderMap(list){
     });
     const marker = L.marker([d.lat, d.lng], { icon }).addTo(markerLayer);
     const dirUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d.name + ' ' + d.address)}`;
+    const hasNotes = !!(d.notes && d.notes.trim());
+    const popupTags = [d.cuisine, d.meal, d.vibe, ...extractNoteTags(d.notes)].filter(Boolean);
     marker.bindPopup(`
       <p class="popup-name">${d.name}${d.closed ? ' (closed)' : ''}</p>
       <p class="popup-loc">${d.hood} · ${d.cuisine}</p>
-      <p class="popup-meta">score ${d.total} · ${d.price}</p>
-      <a class="popup-link" href="${dirUrl}" target="_blank" rel="noopener">Directions →</a>
+      <p class="popup-meta">score ${d.total} · food ${d.food} · ambiance ${d.ambiance} · ${d.price}</p>
+      <div class="popup-tags">${popupTags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      ${hasNotes ? `<p class="popup-excerpt">${excerpt(d.notes, 100)}</p>` : ''}
+      <p class="popup-addr">${d.address}</p>
+      <div class="popup-links">
+        <a class="popup-link" href="${dirUrl}" target="_blank" rel="noopener">Directions →</a>
+        ${hasNotes ? `<a class="popup-link" href="javascript:void(0)" onclick="openReviewModalById(${d.id})">Full review →</a>` : ''}
+      </div>
     `);
   });
   if(withCoords.length){
@@ -1088,6 +1165,14 @@ function rebuildFilterOptions(){
   });
   if(hoods.includes(prevHood)) hoodEl.value = prevHood;
   if(cuisines.includes(prevCuisine)) cuisineEl.value = prevCuisine;
+
+  const prevTag = tagFilterEl.value;
+  tagFilterEl.innerHTML = '<option value="">All</option>';
+  const allTagValues = new Set();
+  DATA.filter(d=>!d.closed).forEach(d=> allTagsFor(d).forEach(t=>allTagValues.add(t)));
+  const tags = uniqueSorted([...allTagValues]);
+  tags.forEach(t=> tagFilterEl.appendChild(new Option(t,t)));
+  if(tags.includes(prevTag)) tagFilterEl.value = prevTag;
 }
 
 function updateStats(){
@@ -1099,9 +1184,41 @@ function updateStats(){
 rebuildFilterOptions();
 updateStats();
 
+function renderActiveFilters(){
+  const box = document.getElementById('activeFilters');
+  const chips = [];
+
+  if(qEl.value.trim()) chips.push({ label: qEl.value.trim(), clear: ()=>{ qEl.value=''; } });
+  if(hoodEl.value) chips.push({ label: hoodEl.value, clear: ()=>{ hoodEl.value=''; } });
+  if(cuisineEl.value) chips.push({ label: cuisineEl.value, clear: ()=>{ cuisineEl.value=''; } });
+  if(tagFilterEl.value) chips.push({ label: tagFilterEl.value, clear: ()=>{ tagFilterEl.value=''; } });
+  if(priceEl.value) chips.push({ label: priceEl.value, clear: ()=>{ priceEl.value=''; } });
+
+  if(!chips.length){
+    box.hidden = true;
+    box.innerHTML = '';
+    return;
+  }
+
+  box.hidden = false;
+  box.innerHTML =
+    chips.map((c,i)=>`<span class="af-chip" data-idx="${i}">${c.label}<button type="button" aria-label="Remove filter">×</button></span>`).join('') +
+    (chips.length > 1 ? '<button type="button" class="af-clear-all">Clear all</button>' : '');
+
+  box.querySelectorAll('.af-chip button').forEach((btn,i)=>{
+    btn.addEventListener('click', ()=>{ chips[i].clear(); render(); });
+  });
+  const clearAllBtn = box.querySelector('.af-clear-all');
+  if(clearAllBtn){
+    clearAllBtn.addEventListener('click', ()=>{ chips.forEach(c=>c.clear()); render(); });
+  }
+}
+
+
 function render(){
   const list = getFilteredList();
   countLine.textContent = `Showing ${list.length} of ${DATA.length} logged`;
+  renderActiveFilters();
 
   if(currentView === 'map'){
     renderMap(list);
@@ -1120,7 +1237,7 @@ function render(){
   list.forEach(d=>{
     const card = document.createElement('div');
     const hasReview = !!(d.notes && d.notes.trim());
-    card.className = 'card' + (d.closed ? ' is-closed' : '') + (hasReview ? ' has-review' : '');
+    card.className = 'card' + (d.closed ? ' is-closed' : '');
     const isFav = d.total >= 9 && !d.closed;
     const stampColor = scoreColor(d.total, scoreRange.min, scoreRange.max);
     const noteTags = extractNoteTags(d.notes);
@@ -1137,10 +1254,10 @@ function render(){
         </div>
       </div>
       <div class="tags">
-        <span class="tag">${d.cuisine}</span>
-        <span class="tag">${d.meal}</span>
-        <span class="tag">${d.vibe}</span>
-        ${noteTags.map(t=>`<span class="tag note-tag">${t}</span>`).join('')}
+        <span class="tag" data-filter-type="cuisine" data-filter-value="${d.cuisine}">${d.cuisine}</span>
+        <span class="tag" data-filter-type="tag" data-filter-value="${d.meal}">${d.meal}</span>
+        <span class="tag" data-filter-type="tag" data-filter-value="${d.vibe}">${d.vibe}</span>
+        ${noteTags.map(t=>`<span class="tag note-tag" data-filter-type="tag" data-filter-value="${t}">${t}</span>`).join('')}
       </div>
       <div class="meta-row">
         <span class="subscore">food ${d.food} · ambiance ${d.ambiance}</span>
@@ -1153,12 +1270,20 @@ function render(){
       </div>
       ${d.closed ? '<div class="closed-badge">✕ Permanently closed</div>' : ''}
     `;
-    if(hasReview){
-      card.addEventListener('click', (e)=>{
-        if(e.target.closest('.map-link')) return;
-        openReviewModal(d);
+    card.querySelectorAll('.tag').forEach(tagEl=>{
+      tagEl.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const type = tagEl.dataset.filterType;
+        const value = tagEl.dataset.filterValue;
+        if(type === 'cuisine'){ cuisineEl.value = value; }
+        else { tagFilterEl.value = value; }
+        render();
       });
-    }
+    });
+    card.addEventListener('click', (e)=>{
+      if(e.target.closest('.map-link') || e.target.closest('.tag')) return;
+      openReviewModal(d);
+    });
     grid.appendChild(card);
   });
 }
@@ -1174,7 +1299,7 @@ viewBtns.forEach(btn=>{
   });
 });
 
-[qEl,hoodEl,cuisineEl,priceEl,sortEl,hideClosedEl].forEach(el=>{
+[qEl,hoodEl,cuisineEl,priceEl,tagFilterEl,sortEl,hideClosedEl].forEach(el=>{
   el.addEventListener('input', render);
   el.addEventListener('change', render);
 });
@@ -1185,8 +1310,11 @@ document.getElementById('syncBtn').addEventListener('click', ()=> loadFromSheet(
 const reviewModalOverlay = document.getElementById('reviewModalOverlay');
 const reviewModalBody = document.getElementById('reviewModalBody');
 
+let modalLeafletMap = null;
+
 function openReviewModal(d){
   const noteTags = extractNoteTags(d.notes);
+  const hasNotes = !!(d.notes && d.notes.trim());
   reviewModalBody.innerHTML = `
     <h2>${d.name}${d.closed ? ' (closed)' : ''}</h2>
     <p class="rm-loc">${d.hood} · ${d.cuisine}</p>
@@ -1196,15 +1324,46 @@ function openReviewModal(d){
       <span>ambiance ${d.ambiance}</span>
       <span>${d.price}</span>
     </div>
-    <div class="rm-body">${d.notes}</div>
+    ${hasNotes
+      ? `<div class="rm-body">${d.notes}</div>`
+      : `<p class="rm-empty">No written review yet for this one — just the numbers for now.</p>`}
     ${noteTags.length ? `<div class="rm-tags">${noteTags.map(t=>`<span class="tag note-tag">${t}</span>`).join('')}</div>` : ''}
+    <p class="rm-addr">${d.address}</p>
+    ${d.lat ? '<div class="rm-map" id="reviewModalMap"></div>' : ''}
   `;
   reviewModalOverlay.hidden = false;
+
+  if(modalLeafletMap){ modalLeafletMap.remove(); modalLeafletMap = null; }
+  if(d.lat && d.lng){
+    setTimeout(()=>{
+      modalLeafletMap = L.map('reviewModalMap', { scrollWheelZoom:false, attributionControl:false })
+        .setView([d.lat, d.lng], 15);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19, subdomains: 'abcd'
+      }).addTo(modalLeafletMap);
+      const color = scoreColor(d.total, getScoreRange().min, getScoreRange().max);
+      L.marker([d.lat, d.lng], {
+        icon: L.divIcon({
+          className:'',
+          html:`<div class="map-marker" style="--marker-color:${color}; width:20px;height:20px;"></div>`,
+          iconSize:[20,20], iconAnchor:[10,10]
+        })
+      }).addTo(modalLeafletMap);
+      modalLeafletMap.invalidateSize();
+    }, 40);
+  }
 }
 
 function closeReviewModal(){
   reviewModalOverlay.hidden = true;
+  if(modalLeafletMap){ modalLeafletMap.remove(); modalLeafletMap = null; }
 }
+
+function openReviewModalById(id){
+  const d = DATA.find(x=>x.id===id);
+  if(d) openReviewModal(d);
+}
+window.openReviewModalById = openReviewModalById;
 
 document.getElementById('reviewModalClose').addEventListener('click', closeReviewModal);
 reviewModalOverlay.addEventListener('click', (e)=>{
